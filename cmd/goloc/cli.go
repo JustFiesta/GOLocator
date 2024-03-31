@@ -1,7 +1,11 @@
 package main
 
-import "flag"
+import (
+	"flag"
+	"fmt"
+)
 
 func main() {
 	flag.String("test", "", "test example")
+	fmt.Println("Hello world!")
 }
