@@ -21,6 +21,7 @@ if [ $? -eq 0 ]; then
 else # catch status for creating/changing dir to GOLocaor/
     echo "Failed to create and change to GOLocator folder!"
     exit 1
+fi
 
 # Try to build goloc binaries 
 if [ $? -eq 0 ]; then
@@ -30,6 +31,7 @@ if [ $? -eq 0 ]; then
 else # catch status for git clone
     echo "Failed to clone repository!"
     exit 1
+fi
 
 # Try to install goloc binaries 
 if [ $? -eq 0 ]; then
@@ -39,9 +41,11 @@ if [ $? -eq 0 ]; then
 else  # catch status for go build -o goloc
     echo "Failed to create build binary!"
     exit 1
+fi
 
 # Catch status of goloc insatllation
 if [[ ! $? -eq 0 ]]; then
     echo "Failed to create build binary!"
     cleanup
     exit 1
+fi
