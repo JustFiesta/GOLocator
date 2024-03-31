@@ -30,22 +30,20 @@ Run `setup.sh` script after cloning reposiory
 * Update current user location - pass the username and location
 
 ```shell
-goloc -u <user_name> -l <location>
+goloc update -u <user_name> -c <location>
 ```
 
 * Search for users in some location within the provided radius
 
 ```shell
-goloc -s <location> -r <radius>
+goloc search -c <location> -r <radius>
 ```
 
 * Return distance traveled by a user within some date/time range. Time range defaults to 1 day.
 
 ```shell
-goloc -s <location> -t <YYYY-MM-DDTHH:MM:SS+UTC>
+goloc travel -t <YYYY-MM-DDTHH:MM:SS+UTC>
 ```
-
-The `-t` is optional
 
 <hr>
 
