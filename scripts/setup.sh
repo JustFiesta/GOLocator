@@ -49,3 +49,5 @@ if [[ ! $? -eq 0 ]]; then
     cleanup
     exit 1
 fi
+
+echo "Goloc installation succesfull!"
