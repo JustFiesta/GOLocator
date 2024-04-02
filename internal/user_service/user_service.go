@@ -71,8 +71,7 @@ func updateUserLocation(c echo.Context) error {
 		Latitude:  latitude,
 		Longitude: longitude,
 	}
-	fmt.Println("DEBUG latitude: ", latitude, ", longitude: ", longitude)
-
+	
 	// persist location to db
 	if err := db.Create(&location).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, "Failed to update user location")
