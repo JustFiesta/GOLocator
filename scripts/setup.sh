@@ -19,7 +19,7 @@ if [ $? -eq 0 ]; then
     git clone https://github.com/JustFiesta/GOLocator
 
 else # catch status for creating/changing dir to GOLocaor/
-    echo "Failed to create and change to GOLocator folder!"
+    echo "Failed to create and change directory into GOLocator folder!"
     exit 1
 fi
 
@@ -30,6 +30,7 @@ if [ $? -eq 0 ]; then
 
 else # catch status for git clone
     echo "Failed to clone repository!"
+    cleanup
     exit 1
 fi
 
@@ -40,6 +41,7 @@ if [ $? -eq 0 ]; then
 
 else  # catch status for go build -o goloc
     echo "Failed to create build binary!"
+    cleanup
     exit 1
 fi
 
