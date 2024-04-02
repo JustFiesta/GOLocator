@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
 	ID        uint   `gorm:"primaryKey"`
@@ -22,4 +26,10 @@ type Location struct {
 
 func (Location) TableName() string {
 	return "location" // change def gorm table name to location (corresponding to db)
+}
+
+// BeforeCreate hook - executed before creating a new record
+func (l *Location) BeforeCreate(tx *gorm.DB) (err error) {
+	l.DateTime = time.Now() // set date_time to now
+	return nil
 }
