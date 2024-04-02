@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -14,14 +15,22 @@ var db *gorm.DB
 
 func initDB() {
 	dsn := "root:@tcp(localhost:3306)/golocator?charset=utf8mb4&parseTime=True&loc=Local"
-	var err error
-	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	sqlDB, err := sql.Open("mysql", dsn)
+
 	if err != nil {
-		panic("failed to connect database")
+		panic("failed to open mysql database")
+	}
+
+	db, err = gorm.Open(mysql.New(mysql.Config{
+		Conn: sqlDB,
+	}), &gorm.Config{})
+
+	if err != nil {
+		panic("gorm failed to connect database")
 	}
 }
-
-func getTraveledDistance(c echo.Context) error{
+func getTraveledDistance(c echo.Context) error {
 
 }
 
