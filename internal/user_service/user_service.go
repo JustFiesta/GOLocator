@@ -71,7 +71,7 @@ func updateUserLocation(c echo.Context) error {
 		Latitude:  latitude,
 		Longitude: longitude,
 	}
-	
+
 	// persist location to db
 	if err := db.Create(&location).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, "Failed to update user location")
@@ -139,9 +139,15 @@ func getUsersInLocation(c echo.Context) error {
 
 	// find users in location within a given radius
 	var users []models.User
-	if err := db.Table("location").Preload("Locations").Find(&users, "latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?", lat-radius, lat+radius, lon-radius, lon+radius).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, "Failed to get users in location")
-	}
+    if err := db.
+        Table("user").
+        Joins("JOIN (SELECT user_id, MAX(date_time) AS max_date FROM location GROUP BY user_id) AS l ON user.id = l.user_id").
+        Joins("JOIN location AS loc ON loc.user_id = l.user_id AND loc.date_time = l.max_date").
+        Where("loc.latitude BETWEEN ? AND ? AND loc.longitude BETWEEN ? AND ?", lat-radius, lat+radius, lon-radius, lon+radius).
+        Where("DATE(loc.date_time) = DATE(NOW())").
+        Find(&users).Error; err != nil {
+        return c.JSON(http.StatusInternalServerError, "Failed to get users in location")
+    }
 
 	return c.JSON(http.StatusOK, users)
 }
