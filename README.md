@@ -52,3 +52,16 @@ goloc travel -t <YYYY-MM-DDTHH:MM:SS+UTC>
 ```shell
 go test
 ```
+
+##### API endpoints
+
+This project has 3 endpoints to comunicate with microservices.
+
+The user_service has:
+
+* `/location/usersinlocation` - GET route. Fetches all users in specified location and radius
+* `/location/:id` - PUT route. Saves new user locaiton into db
+
+The location_service has:
+
+* `/locationhistory/distancetraveled` - GET route. Fetches disatnes and calculates how many km user has traveled since givend date
