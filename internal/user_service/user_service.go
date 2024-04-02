@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"golocator/models"
 
@@ -38,20 +40,81 @@ func initDB() {
 func updateUserLocation(c echo.Context) error {
 	// get userid
 	userID := c.Param("id")
-	fmt.Println("Debug: User id: ", userID)
 	var user models.User
 
+	// check if user is present in db
 	if err := db.First(&user, userID).Error; err != nil {
 		return c.JSON(http.StatusNotFound, "User not found")
 	}
 
-	fmt.Println("Debug: User struct: ", user)
+	// create struct to hold latitude and longitude
+	type Coordinates struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	}
 
-	if err := db.Save(&user).Error; err != nil {
+	// parse request body into Coordinates struct
+	var coordinates Coordinates
+	if err := c.Bind(&coordinates); err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid request format")
+	}
+
+	// validate coordinates
+	latitude, longitude, err := validateCoordinates(fmt.Sprintf("%f,%f", coordinates.Latitude, coordinates.Longitude))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	// create new user location
+	location := models.Location{
+		UserID:    user.ID,
+		Latitude:  latitude,
+		Longitude: longitude,
+	}
+	fmt.Println("DEBUG latitude: ", latitude, ", longitude: ", longitude)
+
+	// persist location to db
+	if err := db.Create(&location).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, "Failed to update user location")
 	}
 
 	return c.JSON(http.StatusOK, "User location updated successfully")
+}
+
+// validateCoordinates - Validate user inputed coordinates AND return both latitude and longitude from one string
+func validateCoordinates(coordStr string) (latitude, longitude float64, err error) {
+	// Regexp pattern to validate latitude and longitude
+	coordPattern := `^[-+]?([1-8]?\d(\.\d{1,8})?|90(\.0{1,8})?),\s*[-+]?(180(\.0{1,8})?|((1[0-7]\d)|([1-9]?\d))(\.\d{1,8})?)$`
+	coordRegex := regexp.MustCompile(coordPattern)
+
+	if !coordRegex.MatchString(coordStr) {
+		return 0, 0, fmt.Errorf("Invalid coordinates format. Use decimal format (latitude,longitude)")
+	}
+
+	// Split coordinates string by comma
+	parts := strings.Split(coordStr, ",")
+
+	// Convert latitude and longitude to float64
+	latitude, err = strconv.ParseFloat(parts[0], 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("Invalid latitude")
+	}
+
+	longitude, err = strconv.ParseFloat(parts[1], 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("Invalid longitude")
+	}
+
+	// Validate latitude range (-90 to 90) and longitude range (-180 to 180)
+	if latitude < -90 || latitude > 90 {
+		return 0, 0, fmt.Errorf("Latitude out of range (-90 to 90)")
+	}
+
+	if longitude < -180 || longitude > 180 {
+		return 0, 0, fmt.Errorf("Longitude out of range (-180 to 180)")
+	}
+
+	return latitude, longitude, nil
 }
 
 // getUsersInLocation - fetches all users in given location
