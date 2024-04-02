@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -17,10 +18,19 @@ var db *gorm.DB
 
 func initDB() {
 	dsn := "root:@tcp(localhost:3306)/golocator?charset=utf8mb4&parseTime=True&loc=Local"
-	var err error
-	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	sqlDB, err := sql.Open("mysql", dsn)
+
 	if err != nil {
-		panic("failed to connect database")
+		panic("failed to open mysql database")
+	}
+
+	db, err = gorm.Open(mysql.New(mysql.Config{
+		Conn: sqlDB,
+	}), &gorm.Config{})
+
+	if err != nil {
+		panic("gorm failed to connect database")
 	}
 }
 
@@ -30,13 +40,9 @@ func updateUserLocation(c echo.Context) error {
 	fmt.Println("Debug: User id: ", userID)
 	var user models.User
 
-    // if err := db.Raw("SELECT * FROM `user` WHERE id = ? ORDER BY `id` LIMIT 1", userID).Scan(&user).Error; err != nil {
-    //     return c.JSON(http.StatusNotFound, "User not found")
-    // }
-
-    if err := db.First(&user, userID).Error; err != nil {
-        return c.JSON(http.StatusNotFound, "User not found")
-    }
+	if err := db.First(&user, userID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, "User not found")
+	}
 
 	fmt.Println("Debug: User struct: ", user)
 
@@ -69,7 +75,7 @@ func getUsersInLocation(c echo.Context) error {
 
 	// find users in location within a given radius
 	var users []models.User
-	if err := db.Preload("Locations").Find(&users, "latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?", lat-radius, lat+radius, lon-radius, lon+radius).Error; err != nil {
+	if err := db.Table("location").Preload("Locations").Find(&users, "latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?", lat-radius, lat+radius, lon-radius, lon+radius).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, "Failed to get users in location")
 	}
 
