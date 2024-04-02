@@ -3,7 +3,11 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"golocator/models"
+	"math"
 	"net/http"
+	"regexp"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -30,20 +34,86 @@ func initDB() {
 		panic("gorm failed to connect database")
 	}
 }
-func getTraveledDistance(c echo.Context) error {
 
+// getTraveledDistance - fetches and calculates all distance traveled since specified date
+func getTraveledDistance(c echo.Context) error {
+	// read http request parameters
+	datetimeStr  := c.QueryParam("datetime")
+
+	fmt.Println("DEBUG datetimestr: ", datetimeStr)
+
+	// validate date format
+	if !validateDate(datetimeStr) {
+		return c.JSON(http.StatusBadRequest, "Invalid date format")
+	}
+
+	// parse datetime
+	datetime, err := time.Parse(time.RFC3339, datetimeStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "Invalid date")
+	}
+
+	// fetch locations since the specified date
+	var locations []models.Location
+	if err := db.Where("date_time >= ?", datetime).Find(&locations).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, "Failed to fetch locations")
+	}
+
+	// calculate total distance traveled
+	totalDistance := 0.0
+	for i := 0; i < len(locations)-1; i++ {
+		totalDistance += haversine(locations[i].Latitude, locations[i].Longitude, locations[i+1].Latitude, locations[i+1].Longitude)
+	}
+
+	return c.JSON(http.StatusOK, fmt.Sprintf("Total distance traveled since %s: %.2f kilometers", datetimeStr, totalDistance))
 }
 
-func runLocationService() {
-	e := echo.New()
-	e.GET("/locationhistory/distancetraveled", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
-	e.Logger.Fatal(e.Start(":1323"))
+func validateDate(date string) bool {
+	// ISO 8601 format
+	iso8601Pattern := `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2}|Z)$`
+
+	// matching format with given string date
+	match, err := regexp.MatchString(iso8601Pattern, date)
+
+	if err != nil {
+		return false
+	}
+
+	if !match {
+		return false
+	}
+
+	// check if date is valid
+	_, err = time.Parse(time.RFC3339, date)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+// haversine calculates the great-circle distance between two points on the Earth's surface
+// given their longitudes and latitudes in degrees
+func haversine(lat1, lon1, lat2, lon2 float64) float64 {
+	// convert degrees to radians
+	lat1Rad := lat1 * math.Pi / 180
+	lon1Rad := lon1 * math.Pi / 180
+	lat2Rad := lat2 * math.Pi / 180
+	lon2Rad := lon2 * math.Pi / 180
+
+	// haversine formula
+	dlon := lon2Rad - lon1Rad
+	dlat := lat2Rad - lat1Rad
+	a := math.Pow(math.Sin(dlat/2), 2) + math.Cos(lat1Rad)*math.Cos(lat2Rad)*math.Pow(math.Sin(dlon/2), 2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	r := 6371.0 // Earth radius in kilometers
+	distance := r * c
+
+	return distance
 }
 
 func main() {
-	runLocationService()
+	initDB()
 
 	e := echo.New()
 
