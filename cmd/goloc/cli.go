@@ -1,3 +1,5 @@
+// CLI tool for comunication with GOLocator microservices
+
 package main
 
 import (
@@ -7,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -16,14 +19,15 @@ func main() {
 	travelFlag := flag.NewFlagSet("travel", flag.ExitOnError)
 
 	// Update flags
-	updateUsername := updateFlag.String("u", "", "Username for updating location")
+	updateUsername := updateFlag.String("u", "", "Username for updating location. Only letters and numbers are avalible  in this order: lettersnumbers")
 	updateCoordinates := updateFlag.String("c", "", "New coordinates (latitude,longitude)")
 
 	// Search flags
-	searchTime := searchFlag.String("t", "", "Date/time for search in YYYY-MM-DDTHH:MM:SS+UTC format (optional)")
+	searchLocation := searchFlag.String("c", "", "Coordinates used to search into")
+	searchRadius := searchFlag.String("r", "", "Radius for searching in some area")
 
 	// Travel flags
-	travelCoordinates := travelFlag.String("c", "", "Coordinates for travel (latitude,longitude)")
+	travelTimeBound := travelFlag.String("t", "", "Date/time for search in YYYY-MM-DDTHH:MM:SS+UTC format")
 
 	// Check if 2 arguments were passed
 	if len(os.Args) < 2 {
@@ -40,6 +44,13 @@ func main() {
 			updateFlag.PrintDefaults()
 			os.Exit(1)
 		}
+
+		isValid := isValidUsername(*updateUsername)
+		if !isValid {
+			fmt.Println("Username is not valid string! example: user1212 <lettersnumbers>")
+			os.Exit(1)
+		}
+
 		latitude, longitude, err := validateCoordinates(*updateCoordinates)
 		if err != nil {
 			fmt.Println("Invalid coordinates:", err)
@@ -47,35 +58,52 @@ func main() {
 		}
 		// user service API comm
 		fmt.Printf("Updating location for user %s to coordinates (%f,%f)\n", *updateUsername, latitude, longitude)
+
 	case "search":
 		searchFlag.Parse(os.Args[2:])
-		if *searchTime == "" {
-			fmt.Println("Usage: goloc search -t <time>")
+		if *searchLocation == "" || *searchRadius == "" {
+			fmt.Println("Usage: goloc search -c <coordinates> -r <radius>")
 			searchFlag.PrintDefaults()
 			os.Exit(1)
 		}
-		// user service API comm
-		fmt.Printf("Searching for user travel distance till %s\n", *searchTime)
-	case "travel":
-		travelFlag.Parse(os.Args[2:])
-		if *travelCoordinates == "" {
-			fmt.Println("Usage: goloc travel -c <coordinates>")
-			travelFlag.PrintDefaults()
-			os.Exit(1)
-		}
-		latitude, longitude, err := validateCoordinates(*travelCoordinates)
+		latitude, longitude, err := validateCoordinates(*searchLocation)
 		if err != nil {
 			fmt.Println("Invalid coordinates:", err)
 			os.Exit(1)
 		}
+
+		radius, err := strconv.ParseFloat(*searchRadius, 64)
+
+        if err != nil {
+            fmt.Println("Invalid radius:", err)
+            os.Exit(1)
+        }
+
+		// user service API comm
+		fmt.Printf("Searching for users in %f, %f within %f radius\n", latitude, longitude, radius)
+
+	case "travel":
+		travelFlag.Parse(os.Args[2:])
+		if *travelTimeBound == "" {
+			fmt.Println("Usage: goloc travel -t <YYYY-MM-DDTHH:MM:SS+UTC>")
+			travelFlag.PrintDefaults()
+			os.Exit(1)
+		}
+		err := validateDate(*travelTimeBound)
+		if !err {
+			fmt.Println("Invalid date format")
+			os.Exit(1)
+		}
 		// location service API comm
-		fmt.Printf("Tracking user travel to coordinates (%f,%f)\n", latitude, longitude)
+		fmt.Printf("Checking user traveled distance since: %v)\n", travelTimeBound)
+
 	default:
 		fmt.Println("Unknown command")
 		os.Exit(1)
 	}
 }
 
+// validateCoordinates - Validate user inputed coordinates AND return both latitude and longitude from one string
 func validateCoordinates(coordStr string) (latitude, longitude float64, err error) {
 	// Regexp pattern to validate latitude and longitude
 	coordPattern := `^[-+]?([1-8]?\d(\.\d{1,8})?|90(\.0{1,8})?),\s*[-+]?(180(\.0{1,8})?|((1[0-7]\d)|([1-9]?\d))(\.\d{1,8})?)$`
@@ -109,4 +137,44 @@ func validateCoordinates(coordStr string) (latitude, longitude float64, err erro
 	}
 
 	return latitude, longitude, nil
+}
+
+// validateDate - validates date string, returns true/false
+func validateDate(date string) bool {
+	// ISO 8601 format
+	iso8601Pattern := `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$`
+
+	// matching format with given string date
+	match, err := regexp.MatchString(iso8601Pattern, date)
+
+	if err != nil {
+		return false 
+	}
+
+	if !match {
+		return false 
+	}
+
+	// check if date is valid
+	_, err = time.Parse(time.RFC3339, date)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+// isValidUsername - checks if username is valid according to `^[a-zA-Z0-9]{4,16}$` pattern
+func isValidUsername(username string) bool {
+	// pattern for username validation
+	usernamePattern := `^[a-zA-Z0-9]{4,16}$`
+
+	// matching username with the pattern
+	match, err := regexp.MatchString(usernamePattern, username)
+
+	if err != nil {
+		return false
+	}
+
+	return match
 }
