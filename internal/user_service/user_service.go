@@ -34,6 +34,7 @@ func initDB() {
 	}
 }
 
+// updateUserLocation - updates user location to specified coordinates
 func updateUserLocation(c echo.Context) error {
 	// get userid
 	userID := c.Param("id")
@@ -53,6 +54,7 @@ func updateUserLocation(c echo.Context) error {
 	return c.JSON(http.StatusOK, "User location updated successfully")
 }
 
+// getUsersInLocation - fetches all users in given location
 func getUsersInLocation(c echo.Context) error {
 	// read http request parameters
 	latStr := c.QueryParam("latitude")
