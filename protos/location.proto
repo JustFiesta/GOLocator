@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package user_location;
+
+import "google/protobuf/timestamp.proto";
+
+message User {
+  uint32 id = 1;
+  string user_name = 2;
+  repeated Location locations = 3;
+}
+
+message Location {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  double latitude = 3;
+  double longitude = 4;
+  google.protobuf.Timestamp datetime = 5;
+}
+
+service UserLocationService {
+  rpc UpdateUserLocation(UpdateLocationRequest) returns (UpdateLocationResponse);
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+}
+
+message UpdateLocationRequest {
+  uint32 user_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+}
+
+message UpdateLocationResponse {
+    bool success = 1;
+}
+
+message SearchUsersRequest {
+  double latitude = 1;
+  double longitude = 2;
+  double radius = 3;
+  // pagination
+}
+
+message SearchUsersResponse {
+  repeated User users = 1;
+  // pagionation
+}
