@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package user_location;
 
+option go_package = "golocator/protos";
+
 import "google/protobuf/timestamp.proto";
 
 message User {
