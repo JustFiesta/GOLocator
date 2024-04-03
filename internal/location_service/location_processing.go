@@ -38,7 +38,7 @@ func initDB() {
 // getTraveledDistance - fetches and calculates all distance traveled since specified date
 func getTraveledDistance(c echo.Context) error {
 	// read http request parameters
-	datetimeStr  := c.QueryParam("datetime")
+	datetimeStr := c.QueryParam("datetime")
 
 	fmt.Println("DEBUG datetimestr: ", datetimeStr)
 
@@ -113,8 +113,10 @@ func haversine(lat1, lon1, lat2, lon2 float64) float64 {
 }
 
 func main() {
+	// initialize new DB connection with GORM
 	initDB()
 
+	// iniitlize new echo router
 	e := echo.New()
 
 	// logger from echo doc
@@ -131,6 +133,7 @@ func main() {
 		},
 	}))
 
+	// listen for GET requests on route /locationhistory/distancetraveled
 	e.GET("/locationhistory/distancetraveled", getTraveledDistance)
 	e.Logger.Fatal(e.Start(":1323"))
 }
